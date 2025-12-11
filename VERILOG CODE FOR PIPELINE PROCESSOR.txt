@@ -1,0 +1,67 @@
+VERILOG CODE FOR PIPELINE PROCESSOR DESIGN
+
+module PipelineCPU(input clk, input reset);
+
+    // ---- Instruction Opcodes ----
+    localparam ADD  = 2'b00;
+    localparam SUB  = 2'b01;
+    localparam LOAD = 2'b10;
+
+    // ---- Instruction Memory ----
+    reg [15:0] IMEM [0:15];   // Each instruction = 16 bits
+
+    // ---- Data Memory ----
+    reg [7:0] DMEM [0:15];
+
+    // ---- Register File (8 registers, 8-bit each) ----
+    reg [7:0] REGFILE [0:7];
+
+    // ---- Pipeline Registers ----
+    reg [15:0] IF_ID;         // Holds instruction
+    reg [15:0] ID_EX;
+    reg [7:0]  EX_WB;
+
+    // ---- Wires for decoding ----
+    wire [1:0] opcode = IF_ID[15:14];
+    wire [2:0] rd     = IF_ID[13:11];
+    wire [2:0] rs1    = IF_ID[10:8];
+    wire [2:0] rs2    = IF_ID[7:5];
+    wire [7:0] imm    = IF_ID[7:0];      // for LOAD
+
+    // ---- ALU result ----
+    reg [7:0] ALU_OUT;
+
+    // ---- Instruction Fetch ----
+    reg [3:0] PC;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            PC    <= 0;
+            IF_ID <= 0;
+            ID_EX <= 0;
+            EX_WB <= 0;
+        end
+        else begin
+            // IF stage
+            IF_ID <= IMEM[PC];
+            PC    <= PC + 1;
+
+            // ID stage
+            ID_EX <= IF_ID;
+
+            // EX stage
+            case(ID_EX[15:14])
+                ADD:  ALU_OUT <= REGFILE[ID_EX[10:8]] + REGFILE[ID_EX[7:5]];
+                SUB:  ALU_OUT <= REGFILE[ID_EX[10:8]] - REGFILE[ID_EX[7:5]];
+                LOAD: ALU_OUT <= DMEM[ID_EX[7:0]];
+            endcase
+
+            // WB stage
+            EX_WB <= ALU_OUT;
+
+            // Write result back to register file
+            REGFILE[ID_EX[13:11]] <= EX_WB;
+        end
+    end
+
+endmodule

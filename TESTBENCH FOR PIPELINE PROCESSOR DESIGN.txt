@@ -1,0 +1,52 @@
+TESTBENCH FOR PIPELINE PROCESSOR DESIGN
+
+`timescale 1ns/1ps
+
+module PIPELINE_TB;
+
+    reg clk, reset;
+
+    // Instantiate CPU
+    PipelineCPU uut (.clk(clk), .reset(reset));
+
+    // Clock: 10ns period
+    always #5 clk = ~clk;
+
+    initial begin
+
+        // Waveform generation
+        $dumpfile("pipeline.vcd");
+        $dumpvars(0, PIPELINE_TB);
+
+        clk = 0;
+        reset = 1;
+        #10 reset = 0;
+
+        // ----------- Program Loading -----------
+        // Instruction Format:
+        // [15:14] opcode
+        // [13:11] rd
+        // [10:8]  rs1
+        // [7:5]   rs2 or address lower bits
+
+        // ADD R1 = R2 + R3  (00 opcode)
+        uut.IMEM[0] = {2'b00, 3'd1, 3'd2, 3'd3, 5'b0};
+
+        // SUB R4 = R2 - R3  (01 opcode)
+        uut.IMEM[1] = {2'b01, 3'd4, 3'd2, 3'd3, 5'b0};
+
+        // LOAD R5 = MEM[8]  (10 opcode)
+        uut.IMEM[2] = {2'b10, 3'd5, 3'b000, 8'd8};
+
+        // ----------- Initialize Registers -----------
+        uut.REGFILE[2] = 8'd10;
+        uut.REGFILE[3] = 8'd4;
+
+        // ----------- Initialize Data Memory -----------
+        uut.DMEM[8] = 8'hA5;
+
+        #200;
+        $finish;
+    end
+
+endmodule
